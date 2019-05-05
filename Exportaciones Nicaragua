@@ -1,0 +1,77 @@
+library(tidiverse)
+library(extrafont)
+loadfonts(device = "win")
+
+comercio_hispanoamerica_mundo <- readr::read_csv("https://raw.githubusercontent.com/cienciadedatos/datos-de-miercoles/master/datos/2019/2019-05-01/comercio_hispanoamerica_mundo_agregado.csv")
+#Exploramos un poco los datos 
+str(comercio_hispanoamerica_mundo)
+
+##Anteriormente habia hecho una grafico de barras donde me mostrara los productos
+##que mas exporta Nicaragua y fueron: Alimentos, Metales preciosos, textiles,
+##maquinaria, productos animales y productos vegetales, los demas no son exportaciones significativas.
+
+comercio2 <- comercio_hispanoamerica_mundo %>% 
+  filter(nombre_pais_origen== "Nicaragua") %>% 
+  mutate(nombre_comunidad_producto= as.factor(nombre_comunidad_producto)) %>% 
+  arrange(desc(valor_exportado_dolares)) %>% 
+  filter(nombre_comunidad_producto %in% c("Alimentos","Metales Preciosos",
+                                          "Textiles","Maquinaria","Productos Animales",
+                                          "Productos Vegetales"))
+
+## Ahora quiero saber cuales son los paises a los que mas exporta Nicaragua
+## por año
+
+comercio3 <- comercio2 %>% 
+  group_by(nombre_pais_destino,anio) %>% 
+  summarise(total=sum(valor_exportado_dolares)) %>% 
+  arrange(desc(total)) %>% 
+  ## tomamos los primeros 10
+  filter(nombre_pais_destino %in% c("EE. UU.", "Canadá","Honduras","México",
+                                    "El Salvador", "República Dominicana","RU",
+                                    "Bélgica","Guatemala","Alemania"))
+
+
+###Preparamos colores para las barras del grafico
+
+cb_palette2 <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442")
+cb_palette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442",
+"#0072B2", "#D55E00", "#CC79A7","#b2d183","#338cd3")
+
+
+## Procedemos con los graficos
+
+ggplot(aes(y=valor_exportado_dolares, x= anio, fill=as.factor(anio), 
+),data = comercio2)+
+  geom_col(show.legend = F)+
+  labs(title = "Valor de las exportaciones de Nicaragua (USD)", 
+       subtitle = "Para @R4DS_es", caption = "Made by @miangeltiz20")+
+  theme_bw()+
+  theme(axis.title.x = element_blank(),
+        legend.position = "bottom",
+        legend.direction = "horizontal",
+        axis.title.y = element_blank(),
+        legend.title = element_blank(),
+        plot.title = element_text(family = "Times New Roman", face = "bold"))+
+  scale_fill_manual(values = cb_palette2)+
+  facet_wrap(~reorder(nombre_comunidad_producto,valor_exportado_dolares))
+  
+#Procedemos con el segundo grafico de los paises a los que mas exporta Nicaragua
+
+ggplot(aes(y= total, x=reorder(nombre_pais_destino, total), fill= nombre_pais_destino), 
+       data = comercio3)+
+  geom_col(show.legend = F)+
+  labs(title = "Los 10 Paises a los que mas exporta Nicaragua", 
+       subtitle = "Para @R4DS_es", caption = "Made by @miangeltiz20")+
+  theme_bw()+
+  theme(axis.title.x = element_blank(),
+        legend.position = "bottom",
+        axis.text.x = element_text(family = "Times New Roman"),
+        axis.title.y = element_blank(),
+        legend.direction = "horizontal",
+        legend.title = element_blank(),
+        plot.title= element_text(family = "Times New Roman", face = "bold"))+
+  scale_fill_manual(values = cb_palette)+
+  coord_flip()+
+  facet_wrap(~anio)
+  
+Un Placer poder participar en esta iniciativa de R4DS_es
