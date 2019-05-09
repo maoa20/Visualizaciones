@@ -1,0 +1,85 @@
+library(tidyverse)
+library(extrafont)
+
+loadfonts(device= "win")
+
+#Importamos los datos y hacemos una visión general
+datos_uip <- readr::read_csv("https://raw.githubusercontent.com/cienciadedatos/datos-de-miercoles/master/datos/2019/2019-05-08/datos_uip.csv")
+str(datos_uip)
+
+
+#Filtramos por camara alta y única, quitamos los NA, quitamos los decimales de los porcentajes y con ntile() hacemos 5 grupos
+#de datos, idea interesante que tome del tidytuesday especificamente de @theotheredgar.
+congreso_woman <- datos_uip %>% 
+  filter(camara %in% c("alta","única"), !is.na(porcentaje_mujeres)) %>% 
+  select(pais,camara,porcentaje_mujeres) %>% 
+  mutate(porcentaje_mujeres= round(porcentaje_mujeres)) %>% 
+  mutate(grupos= ntile(porcentaje_mujeres,5))
+  
+  #Preparamos este vector para que los 5 grupos anteriores tengan el nombre que deseamos, y tomando como referencia el maximo
+  #de cada grupo.
+  por_grupos <- congreso_woman %>% 
+  group_by(grupos) %>% 
+  summarise(pl=max(porcentaje_mujeres)) %>% 
+  pull() %>% 
+  paste0("arriba de ", .)
+  
+  #Cargamos el mapa y quitamos la antarctica que no es de nuestros interes
+  map.world <- map_data("world") %>% 
+  filter(region!="Antarctica") 
+  
+  #Al ser un dataset traducido muchos nombres no coinciden con la tabla del mapa por lo tanto hay que cambiarlos para que 
+  #el plot los tome en cuenta, es verdad que faltan algunos países pero es una cantidad significativa.
+  mapped <- congreso_woman %>% 
+  mutate(
+    key = case_when(
+      congreso_woman$pais == "Estados Unidos" ~ "USA",
+      congreso_woman$pais == "Rusia" ~ "Russia",
+      congreso_woman$pais == "Canadá" ~ "Canada",
+      congreso_woman$pais == "Reino Unido" ~ "UK",
+      congreso_woman$pais == "Corea del Sur" ~ "South Korea",
+      congreso_woman$pais == "México" ~ "Mexico",
+      congreso_woman$pais == "Brasil" ~ "Brazil",
+      congreso_woman$pais == "Francia" ~ "France",
+      congreso_woman$pais == "Alemania" ~ "Germany",
+      congreso_woman$pais == "Perú" ~ "Peru",
+      congreso_woman$pais == "Países Bajos" ~ "Netherlands",
+      TRUE ~ congreso_woman$pais
+    ))
+    
+    #Juntamos las tablas
+    country_join <- left_join(map.world,mapped,
+                          by= c("region"="key"))
+                          
+    #Preparamos los colores
+    
+    cb_palette3 <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442",
+                "#0072B2", "#D55E00")
+                
+    #Procedemos con el grafico
+    
+    ggplot(data = country_join2, aes(x=long, y=lat, group= group))+
+  geom_polygon(aes(fill=(as.factor(grupos))), 
+               color="black")+
+  scale_fill_manual(
+    values = cb_palette3,
+    labels = por_grupos2,
+    name = "Porcentajes"
+  ) +
+  labs(title = "Porcentaje de Mujeres como Representantes ante las Camaras 
+  Bajas y Unicas",
+       subtitle = "Para @R4DS_es", caption = "Source: Unión Interparlamentaria/
+       Visualization by Miguel O. @miangeltiz20")+
+  theme_minimal()+
+  theme(panel.border = element_blank(),
+        legend.background = element_rect(fill = NA, color = NA),
+        plot.caption = element_text(size = 8, family = "Times New Roman"),
+        panel.grid = element_blank(), 
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        plot.title = element_text(family = "Lucida Sans", face = "bold"),
+        axis.text = element_blank())+
+  coord_cartesian(ylim = c(-55, 80))
+ #Lo mismo equilvadria con la grafica de la camara alta solamente es filtras por camara baja                         
+ #Un placer participar en esta inicitativa de R4DS_es                          
+                          
